@@ -11,7 +11,7 @@ from ai_assistant.config import prompts
 from ai_assistant.utils.history import get_history_id, get_history, save_history, save_history_id
 from langchain_community.embeddings.yandex import YandexGPTEmbeddings
 from ai_assistant.utils.closest_chunks import get_closest_chunks_id
-
+from enum import Enum
 
 api_router = APIRouter(tags=["ai_assistant"])
 
@@ -33,67 +33,24 @@ emb = YandexGPTEmbeddings(
     folder_id=settings.YC_FOLDER_ID,
 )
 
+class Sex(Enum):
+    male = "male"
+    female = "female"
+
 
 @api_router.post(
-    "/ask_question_id",
+    "/get_recommendation_id",
     status_code=status.HTTP_200_OK,
 )
-async def ask_question_id(
-    model: QuestionId = Body(...),
-    session: AsyncSession = Depends(get_session),
+async def get_recommendation_id(
+    sex: Sex,
+    age: int,
 ):
-    question_vector = emb.embed_query(model.text)
-    closest_chunks: list[str] = await get_closest_chunks_id(model.user_id, question_vector, session)
-
-
-
-    history = await get_history_id(model.user_id, session)
-    tmp = await prompts.generate_question_prompt(model.text, history, closest_chunks)
-
-    response = _llm.invoke(tmp)
-    if model.text[-1] != "?":
-        await save_history_id(model.user_id, session, model.text)
+    response = _llm.invoke(f"Дай небольшую(2-3 преложения) рекомендацию по сну для ребенка с полом = {sex} и возрастом = {age}")
     return {"response": re.sub(
         r"Thoughts:.*?Answer:",
         "",
         response.content,
         flags=re.S
-        ).strip()
-    }
-
-
-
-async def ask_question_uuid(
-    model: Question = Body(...),
-    session: AsyncSession = Depends(get_session),
-):
-
-    history = await get_history(model.user_id, session)
-    tmp = await prompts.generate_question_prompt(model.text, history)
-    response = _llm.invoke(tmp)
-    await save_history(model.user_id, session, model.text)
-
-    return {"response": re.sub(
-        r"Thoughts:.*?Answer:",
-        "",
-        response.content,
-        flags=re.S
-        ).strip()
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    ).strip()
+            }
