@@ -3,6 +3,8 @@ from ai_assistant.api.add_source import api_router as add_source_router
 from ai_assistant.api.get_recommendation import api_router as get_recommendation_router
 from ai_assistant.api.get_quest import api_router as get_quest_router
 from ai_assistant.api.get_recommendation import api_router as get_recommendation_router
+from ai_assistant.api.get_recommendation_sleep import api_router as get_recommendation_sleep_router
+from ai_assistant.api.get_recommendation_activity import api_router as get_recommendation_activity_router
 
 list_of_routers = [
     ask_question_router,
@@ -10,6 +12,8 @@ list_of_routers = [
     get_recommendation_router,
     get_quest_router,
     get_recommendation_router,
+    get_recommendation_activity_router,
+    get_recommendation_sleep_router,
 ]
 
 

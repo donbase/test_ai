@@ -43,7 +43,7 @@ BASE_URL = "http://158.160.44.235/api/v1/child/"
 
 
 @api_router.get(
-    "/get_recommendation_id/{id}",
+    "/get_recommendation_activity_id/{id}",
     status_code=status.HTTP_200_OK,
 )
 async def get_recommendation(
@@ -56,19 +56,15 @@ async def get_recommendation(
     after_date_obj = before_date_obj - timedelta(days=7)
     after_date = after_date_obj.strftime('%Y-%m-%d')
     async with httpx.AsyncClient() as client:
-        sleep_response = await client.get(BASE_URL + str(id) + "/" + "sleep", params={"after_date": after_date, "before_date": before_date})
         steps_response = await client.get(BASE_URL + str(id) + "/" + "steps", params={"after_date": after_date, "before_date": before_date})
         activity_response = await client.get(BASE_URL + str(id) + "/" + "active_minutes", params={"after_date": after_date, "before_date": before_date})
 
     prompt = (
         f"У меня есть следующая информация по ребенку с полом {sex} и возрастом {age}:\n"
-        f"Информация по сну:\n{sleep_response.text}\n\n"
         f"Информация по шагам:\n{steps_response.text}\n\n"
         f"Информация по активности:\n{activity_response.text}\n\n"
-        f"Оценивая эти показатели, дай по ним отзыв, дай небольшую (2-3 предложения) рекомендацию по сну для ребенка."
+        f"Оценивая эти показатели, дай по ним отзыв, дай небольшую (2-3 предложения) рекомендацию по активности для этого ребенка."
     )
-    print(sleep_response.text)
-
 
     response = _llm.invoke(prompt)
     return {"response": re.sub(
