@@ -1,3 +1,5 @@
+import uuid
+import httpx
 from fastapi import APIRouter, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -6,12 +8,12 @@ from ai_assistant.db.connection import get_session
 from langchain_community.chat_models.openai import ChatOpenAI
 from langchain_core.rate_limiters import InMemoryRateLimiter
 from ai_assistant.config import settings
-from ai_assistant.schemas import Question, QuestionId
-from ai_assistant.config import prompts
-from ai_assistant.utils.history import get_history_id, get_history, save_history, save_history_id
 from langchain_community.embeddings.yandex import YandexGPTEmbeddings
 from ai_assistant.utils.closest_chunks import get_closest_chunks_id
 from enum import Enum
+from datetime import datetime, timedelta
+
+
 
 api_router = APIRouter(tags=["ai_assistant"])
 
@@ -37,16 +39,38 @@ class Sex(Enum):
     male = "male"
     female = "female"
 
+BASE_URL = "http://158.160.44.235/api/v1/child/"
 
-@api_router.post(
-    "/get_recommendation_id",
+
+@api_router.get(
+    "/get_recommendation_id/{id}",
     status_code=status.HTTP_200_OK,
 )
-async def get_recommendation_id(
+async def get_recommendation(
+    id: uuid.UUID,
     sex: Sex,
     age: int,
 ):
-    response = _llm.invoke(f"Дай небольшую(2-3 преложения) рекомендацию по сну для ребенка с полом = {sex} и возрастом = {age}")
+    before_date_obj = datetime.now()
+    before_date = before_date_obj.strftime('%Y-%m-%d')
+    after_date_obj = before_date_obj - timedelta(days=7)
+    after_date = after_date_obj.strftime('%Y-%m-%d')
+    async with httpx.AsyncClient() as client:
+        sleep_response = await client.get(BASE_URL + str(id) + "/" + "sleep", params={"after_date": after_date, "before_date": before_date})
+        steps_response = await client.get(BASE_URL + str(id) + "/" + "steps", params={"after_date": after_date, "before_date": before_date})
+        activity_response = await client.get(BASE_URL + str(id) + "/" + "active_minutes", params={"after_date": after_date, "before_date": before_date})
+
+    prompt = (
+        f"У меня есть следующая информация по ребенку с полом {sex} и возрастом {age}:\n"
+        f"Информация по сну:\n{sleep_response.text}\n\n"
+        f"Информация по шагам:\n{steps_response.text}\n\n"
+        f"Информация по активности:\n{activity_response.text}\n\n"
+        f"Оценивая эти показатели, дай по ним отзыв, дай небольшую (2-3 предложения) рекомендацию по сну для ребенка."
+    )
+    print(sleep_response.text)
+
+
+    response = _llm.invoke(prompt)
     return {"response": re.sub(
         r"Thoughts:.*?Answer:",
         "",
