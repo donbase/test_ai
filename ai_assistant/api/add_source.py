@@ -66,9 +66,11 @@ async def add_source_handler(
                 new_string.embedding = vector
                 new_string.text_chunk = page
                 session.add(new_string)
-
+        else:
+            return {"error": "wrong file format"}
 
         await session.commit()
+        return {"detail": "File successfully uploaded!"}
 
 
     except Exception as exc:
